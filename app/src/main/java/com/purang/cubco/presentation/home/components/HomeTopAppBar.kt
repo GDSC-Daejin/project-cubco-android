@@ -1,4 +1,4 @@
-package com.purang.cubco.core.components
+package com.purang.cubco.presentation.home.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TopAppBar(
+fun HomeTopAppBar(
     navigateUp : () -> Unit,
     modifier: Modifier = Modifier,
 ) {
