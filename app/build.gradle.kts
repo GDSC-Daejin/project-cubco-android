@@ -9,6 +9,10 @@ plugins {
     alias(libs.plugins.devtools.ksp)
 }
 
+val properties = Properties().apply {
+    load(project.rootProject.file("local.properties").inputStream())
+}
+
 android {
     namespace = "com.purang.cubco"
     compileSdk = libs.versions.compileSdk.get().toInt()
@@ -21,6 +25,7 @@ android {
         versionName = libs.versions.versionName.get()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "BASE_URL", properties["base.url"].toString())
     }
 
     buildTypes {
