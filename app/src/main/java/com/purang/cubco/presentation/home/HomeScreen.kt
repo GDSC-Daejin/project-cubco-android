@@ -1,5 +1,6 @@
 package com.purang.cubco.presentation.home
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -25,180 +26,193 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.flowWithLifecycle
 import com.purang.cubco.R
 import com.purang.cubco.core.components.StableImage
-import com.purang.cubco.core.ui.theme.Purple80
+import com.purang.cubco.core.ui.theme.CUBCOTheme
+import com.purang.cubco.core.ui.theme.CubcoTheme
+import com.purang.cubco.core.util.UiState
+import com.purang.cubco.data.models.CurationEntity
+import com.purang.cubco.presentation.home.components.HomeCurationCard
 import com.purang.cubco.presentation.home.components.HomeTopAppBar
+import kotlinx.collections.immutable.PersistentList
 
 @Composable
 fun HomeRoute(
     paddingValues: PaddingValues,
     navigateUp: () -> Unit,
-    snackBarHostState: SnackbarHostState,
-    //viewModel: ClubDetailHomeViewModel = hiltViewModel()
+    navigateNext: () -> Unit,
+    snackBarHostState : SnackbarHostState,
+    modifier: Modifier = Modifier,
+    viewModel: HomeViewModel = hiltViewModel()
 ) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+
+    LaunchedEffect(Unit) {
+        viewModel.getCurations()
+    }
+
+    LaunchedEffect(viewModel.sideEffect, lifecycleOwner) {
+        viewModel.sideEffect.flowWithLifecycle(lifecycleOwner.lifecycle)
+            .collect { sideEffect ->
+                when (sideEffect) {
+                    is HomeSideEffect.ShowSnackBar -> snackBarHostState.showSnackbar(sideEffect.message)
+                    HomeSideEffect.NavigateNext -> navigateNext()
+                    HomeSideEffect.NavigateUp -> navigateUp()
+                }
+            }
+    }
 
     HomeScreen(
         paddingValues = paddingValues,
-        //navigateUp = viewModel::navigateUp,
+        snackBarHostState = snackBarHostState,
+        navigateUp = viewModel::navigateUp,
+        navigateNext = viewModel::navigateNext,
         //state = state.uiState
+        state = state.uiState,
+        modifier = modifier,
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     paddingValues: PaddingValues,
-    //navigateUp: () -> Unit,
-    //state: UiState<ClubDetailEntity>,
-    modifier: Modifier = Modifier
+    state: UiState<PersistentList<CurationEntity>>,
+    navigateUp: () -> Unit,
+    navigateNext: () -> Unit,
+    modifier: Modifier = Modifier,
+    snackBarHostState: SnackbarHostState = SnackbarHostState(),
 ) {
     val curationListTest = listOf(0,1,2,3,4,5)
     val tagListTest = listOf("모두", "인기 있는", "새로운", "조용한")
 
-    Column (
+    LazyColumn (
         modifier = Modifier
             .fillMaxSize()
+            .padding(paddingValues)
             .padding(16.dp)
             //.verticalScroll(rememberScrollState())
     ){
-        HomeTopAppBar(
-            navigateUp = {
-                //navigateUp()
-            },
-            modifier = modifier
-        )
-        //쿠폰
-        StableImage(
-            drawableResId = R.drawable.div,
-            modifier = modifier
-                .fillMaxWidth(),
-            contentDescription = "coupon sample",
-            contentScale = ContentScale.Crop
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        //큐레이션
-        LazyRow (
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            itemsIndexed(
-                items = curationListTest,
-            ) { _, item ->
-                CurationCard()
+        when (state) {
+            is UiState.Loading -> {
+                item {
+                    Text(
+                        textAlign = TextAlign.Center,
+                        text = stringResource(R.string.loading_string),
+                        fontSize = 30.sp
+                    )
+                }
             }
-        }
 
-        Spacer(modifier = Modifier.padding(top = 12.dp))
+            is UiState.Empty -> {
+                item {
+                    Text(
+                        textAlign = TextAlign.Center,
+                        text = stringResource(R.string.empty_string),
+                        fontSize = 30.sp
+                    )
+                }
+            }
 
-        //태그
-        LazyRow {
-            itemsIndexed(
-                items = tagListTest
-            ) { _, item ->
-                TagItemUI(
-                    item = item,
-                    selectedItem = "모두", //Todo : 나중에 state로 변경해서 선택 chip이름 가져오기
-                    onClickChip = {
+            is UiState.Failure -> {
+                item {
+                    Text(
+                        textAlign = TextAlign.Center,
+                        text = state.message,
+                        //style = CubcoTheme.typography.body1Sb15,
+                        color = CubcoTheme.colors.red5
+                    )
+                }
+            }
 
+            is UiState.Success -> {
+                stickyHeader {
+                    Column {
+                        HomeTopAppBar(
+                            navigateUp = navigateUp,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        StableImage(
+                            drawableResId = R.drawable.div,
+                            modifier = Modifier.fillMaxWidth(),
+                            contentDescription = "coupon sample",
+                            contentScale = ContentScale.Crop
+                        )
                     }
-                )
-            }
-        }
+                }
 
-        //추천
-        LazyColumn {
-            itemsIndexed(
-                items = curationListTest
-            ) { _, item ->
-                Recommendation()
-            }
-        }
-    }
-}
+                item {
+                    //큐레이션
+                    LazyRow (
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        itemsIndexed(
+                            items = state.data,
+                        ) { _, item ->
+                            HomeCurationCard(
+                                thumbnail = item.thumbnail,
+                                title = item.title,
+                                content = item.content,
+                                like = item.like,
+                                onClickCard = {
+                                    navigateNext()
+                                }
+                            )
+                        }
+                    }
+                }
 
+                item {
+                    Spacer(modifier = Modifier.padding(top = 12.dp))
 
-@Composable
-fun CurationCard() {
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.elevatedCardElevation(
-            defaultElevation = 4.dp
-        ),
-        modifier = Modifier
-            .width(120.dp)
-            .height(LocalConfiguration.current.screenHeightDp.dp * 0.25f)
-    ) {
-        Column(
-            modifier = Modifier
-        ) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.img),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
+                    //태그
+                    LazyRow {
+                        itemsIndexed(
+                            items = tagListTest
+                        ) { _, item ->
+                            TagItemUI(
+                                item = item,
+                                selectedItem = "모두", //Todo : 나중에 state로 변경해서 선택 chip이름 가져오기
+                                onClickChip = {
 
-                Text(
-                    text = "NEW",
-                    color = Color.White,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .padding(8.dp)
-                        .background(Color.Red, shape = RoundedCornerShape(4.dp))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                        .align(Alignment.TopStart)
-                )
-            }
+                                }
+                            )
+                        }
+                    }
+                }
 
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.White)
-                    .clip(RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp))
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-            ) {
-                Text(
-                    text = "조용한 카페",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.Black,
-                    modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    //나중에 내용 추가
+                itemsIndexed(
+                    items = curationListTest
+                ) { _, item ->
+                    Recommendation()
                 }
             }
         }
     }
 }
+
 
 
 @Composable
@@ -221,10 +235,9 @@ fun TagItemUI(
             .padding(end = 8.dp),
         colors = AssistChipDefaults.assistChipColors(
             containerColor = if (item == selectedItem)
-                Purple80
+                CubcoTheme.colors.red7
             else
                 Color.White,
-            disabledContainerColor = Color.White
         )
     )
 }
@@ -234,7 +247,7 @@ fun Recommendation(
 
 ) {
     Column (
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxWidth()
             .background(Color.White, RoundedCornerShape(16.dp))
     ) {
         Box (
@@ -285,8 +298,14 @@ fun Recommendation(
 
 @Preview(showBackground = true)
 @Composable
-fun CurationPreview() {
-    HomeScreen(
-        paddingValues = PaddingValues(),
-    )
+private fun HomeScreenPreview() {
+    CUBCOTheme {
+        HomeScreen(
+            paddingValues = PaddingValues(),
+            state = UiState.Loading,
+            navigateUp = {},
+            navigateNext = {},
+            snackBarHostState = SnackbarHostState()
+        )
+    }
 }
