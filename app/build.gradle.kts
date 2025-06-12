@@ -26,6 +26,15 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "BASE_URL", properties["base.url"].toString())
+        buildConfigField("String", "KAKAO_NATIVE_KEY", properties["kakao.native.key"].toString())
+        buildConfigField("String", "KAKAO_REST_API_KEY", properties["kakao.rest.api"].toString())
+
+        manifestPlaceholders["KAKAO_NATIVE_KEY"] = properties["kakao.native.key"].toString()
+
+        /*카카오맵 에뮬레이터 오류 해결법*/
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+        }
     }
 
     buildTypes {
@@ -77,4 +86,9 @@ dependencies {
     implementation(libs.coil.compose)
 
     implementation(libs.timber)
+
+    //카카오
+    implementation(libs.kakaoMaps)
+    implementation(libs.v2.all) // 전체 모듈 설치, 2.11.0 버전부터 지원
+
 }
