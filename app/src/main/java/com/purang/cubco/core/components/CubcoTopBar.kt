@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material3.Icon
@@ -11,6 +12,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.purang.cubco.core.ui.theme.CUBCOTheme
 import com.purang.cubco.core.util.noRippleClickable
 
 @Composable
@@ -24,6 +28,8 @@ fun CubcoTopBar(
             .background(Color.White)
     ) {
         Row (
+            modifier = Modifier
+                .padding(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -42,5 +48,15 @@ fun CubcoTopBar(
                 trailingIcon(modifier)
             }
         }
+    }
+}
+
+@Preview
+@Composable
+private fun CubcoTopBarPreview() {
+    CUBCOTheme {
+        CubcoTopBar(
+            navigateUp = {}
+        )
     }
 }
